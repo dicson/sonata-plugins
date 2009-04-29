@@ -30,3 +30,5 @@ Index: sonata/main.py
  				pluginsystem.set_enabled(plugin, True)
  
  		# New plugins
+
+
