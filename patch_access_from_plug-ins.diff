@@ -1,0 +1,32 @@
+Index: sonata/pluginsystem.py
+===================================================================
+--- sonata/pluginsystem.py	(revision 1234)
++++ sonata/pluginsystem.py	(working copy)
+@@ -21,6 +21,7 @@
+ 		self.name = name
+ 		self._info = info
+ 		self._load = load
++		self.app = self
+ 		# obligatory plugin info:
+ 		format_value = info.get('plugin', 'plugin_format')
+ 		self.plugin_format = tuple(map(int, format_value.split(',')))
+@@ -181,6 +182,7 @@
+ 		# XXX load from a .py file - no .pyc etc.
+ 		__import__('sonata.plugins', {}, {}, [name], 0)
+ 		plugin = getattr(sonata.plugins, name)
++		plugin.APP = self.app
+ 		return plugin
+ 
+ pluginsystem = PluginSystem()
+Index: sonata/main.py
+===================================================================
+--- sonata/main.py	(revision 1234)
++++ sonata/main.py	(working copy)
+@@ -793,6 +793,7 @@
+ 		# Autostart plugins
+ 		for plugin in pluginsystem.get_info():
+ 			if plugin.name in self.config.autostart_plugins:
++				pluginsystem.app = self
+ 				pluginsystem.set_enabled(plugin, True)
+ 
+ 		# New plugins
