@@ -1,6 +1,6 @@
 Index: sonata/pluginsystem.py
 ===================================================================
---- sonata/pluginsystem.py	(revision 1234)
+--- sonata/pluginsystem.py	(revision 1238)
 +++ sonata/pluginsystem.py	(working copy)
 @@ -21,6 +21,7 @@
  		self.name = name
@@ -20,15 +20,14 @@ Index: sonata/pluginsystem.py
  pluginsystem = PluginSystem()
 Index: sonata/main.py
 ===================================================================
---- sonata/main.py	(revision 1234)
+--- sonata/main.py	(revision 1238)
 +++ sonata/main.py	(working copy)
-@@ -793,6 +793,7 @@
- 		# Autostart plugins
- 		for plugin in pluginsystem.get_info():
- 			if plugin.name in self.config.autostart_plugins:
-+				pluginsystem.app = self
- 				pluginsystem.set_enabled(plugin, True)
+@@ -785,6 +785,7 @@
+ 		gc.disable()
+ 		
+ 		gobject.idle_add(self.header_save_column_widths)
++		pluginsystem.app = self
  
- 		# New plugins
-
+ 		pluginsystem.notify_of('tabs', 
+ 				       self.on_enable_tab, 
 

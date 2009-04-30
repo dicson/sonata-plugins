@@ -153,7 +153,7 @@ class MPRISRoot(dbus.service.Object):
 	def Quit(self):
 		print 'Aborting at client request.'
 # TODO: What should do a plug-in or a player?
-		#self.loop.stop()
+		self.loop.stop()
 
 	@dbus.service.method('org.freedesktop.MediaPlayer', in_signature = '', out_signature = '(qq)')
 	def MprisVersion(self):
