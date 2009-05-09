@@ -15,7 +15,7 @@
 ### END PLUGIN INFO
 
 from gettext import gettext as _
-import subprocess, gtk
+import subprocess, gtk, ConfigParser, os
 
 from gobject import source_remove,io_add_watch
 
@@ -29,15 +29,32 @@ class XlibKeys(object):
 	def __init__(self):
 		# keyb = 'name':[keyname,keycode,shift,ctrl,alt,mod1,mod2,callback,callback-arguments]
 		self.action = ['play', 'stop', 'pause', 'next', 'prev', 'pp','repeat', 'random' ]
-		self.keyb = {'play':  ['exclam', 10, 1, 1, 0, 1, 0, 'run_command','"play"'],
-					 'stop':  ['numbersign', 12, 1, 1, 0, 1, 0, 'run_command','"stop"'],
-					 'pause': ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pause"'],
-					 'next':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"next"'],
-					 'prev':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"prev"'],
-					 'pp':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pp"'],
+		self.keyb = {'play':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"play"'],
+					 'stop':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"stop"'],
+					 'pause':   ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pause"'],
+					 'next':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"next"'],
+					 'prev':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"prev"'],
+					 'pp':      ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pp"'],
 					 'repeat':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"repeat"'],
 					 'random':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"random"'],
 					 }
+		"""Load configuration from file"""
+		conf = ConfigParser.ConfigParser()
+		if os.path.isfile(os.path.expanduser('~/.config/sonata/Global hotkey')):
+			conf.read(os.path.expanduser('~/.config/sonata/Global hotkey'))
+			load_vars = conf.items('DEFAULT')
+			for key in conf.items('DEFAULT'):
+				z = key[1].strip("[]").split(', ')
+				z[0] = z[0].replace("'", '')
+				z[1] = int(z[1])
+				z[2] = int(z[2])
+				z[3] = int(z[3])
+				z[4] = int(z[4])
+				z[5] = int(z[5])
+				z[6] = int(z[6])
+				z[7] = z[7].replace("'", '')
+				z[8] = z[8].replace("'", '')
+				self.keyb[key[0]] = z
 
 		self.listen()
 
@@ -113,38 +130,35 @@ def on_configure(window, plugin_name):
 	def defineNewKey(widget,data):
 
 		def keypressed(widget, event):
-			mod = 0
+			
 			# put pressed modifiers into the list and count them
 			####
+			a.keyb[data][2]=0
+			a.keyb[data][3]=0
+			a.keyb[data][4]=0
+			a.keyb[data][5]=0                              
+			a.keyb[data][6]=0
+			mod = 0
+			
 			if 'GDK_SHIFT_MASK' in event.state.value_names:
 				a.keyb[data][2] = 1
 				mod += 1
-			else:
-				a.keyb[data][2] = 0
 				
 			if 'GDK_CONTROL_MASK' in event.state.value_names:
 				a.keyb[data][3] = 1
 				mod += 1                    
-			else:
-				a.keyb[data][3] = 0
 
 			if 'GDK_MOD1_MASK' in event.state.value_names:
 				a.keyb[data][4] = 1
 				mod += 1
-			else:
-				a.keyb[data][4] = 0
 
 			if 'GDK_MOD2_MASK' in event.state.value_names:
 				a.keyb[data][5] = 1
 				mod += 1
-			else:
-				a.keyb[data][5] = 0
 
 			if 'GDK_MOD3_MASK' in event.state.value_names:
 				a.keyb[data][6] = 1
 				mod += 1
-			else:
-				a.keyb[data][6] = 0
 
 			#### now sort out the exceptions
 			# omitt doing an action for modifier key events                
@@ -257,7 +271,11 @@ def on_configure(window, plugin_name):
 	if response == gtk.RESPONSE_OK:
 		a.listen()
 		window.destroy()
-		return ('key1',0),('key2',2)
+		# return save variables
+		save_vars = []
+		for key in a.keyb.keys():
+			save_vars.append((key, a.keyb[key]))
+		return save_vars
 	else:
 		window.destroy()
 	
