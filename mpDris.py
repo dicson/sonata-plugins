@@ -27,7 +27,7 @@ import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 import ConfigParser
 import threading
-
+import gtk
 # Get host,port,musicdir from config
 conf = ConfigParser.ConfigParser()
 conf.read(os.path.expanduser('~/.config/sonata/sonatarc'))
@@ -428,5 +428,3 @@ def on_enable(state):
 	else:
 		if thread.isAlive():
 			thread.stop()
-
-
