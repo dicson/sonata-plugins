@@ -282,7 +282,7 @@ class MPRISPlayer(dbus.service.Object):
 		if status['state'] == 'stop':
 			return
 
-		self.mpd_wrapper.seek(status['songid'], int(position / 1000))
+		self.mpd_wrapper.seek(status['song'], int(position / 1000))
 		return
 
 	@dbus.service.method('org.freedesktop.MediaPlayer', in_signature = '', out_signature = 'i')
