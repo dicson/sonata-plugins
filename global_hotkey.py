@@ -2,24 +2,27 @@
 
 ### BEGIN PLUGIN INFO
 # [plugin]
-# plugin_format: 0, 0, 0
+# plugin_format: 0, 0
 # name: Global hotkey
-# version: 0, 0, 0
-# description: Global hotkey support.Requires python-Xlib.
+# version: 0, 0, 1
+# description: Global hotkey support.Requires python-Xlib. Suggests mpDris plugin for seek commands
 # author: Fomin Denis
 # author_email: fominde@gmail.com
-# url: http://sonata.berlios.de
+# url:
 # [capabilities]
 # enablables: on_enable
 # configure: on_configure
 ### END PLUGIN INFO
 
-from gettext import gettext as _
 import subprocess, gtk, ConfigParser, os
 
 from gobject import source_remove,io_add_watch
 import ConfigParser
+##########
+import dbus
+import threading
 
+########
 try:
 	from Xlib.display import Display
 	from Xlib import X
@@ -29,15 +32,17 @@ except ImportError:
 class XlibKeys(object):
 	def __init__(self):
 		# keyb = 'name':[keyname,keycode,shift,ctrl,alt,mod1,mod2,callback,callback-arguments]
-		self.action = ['play', 'stop', 'pause', 'next', 'prev', 'pp','repeat', 'random' ]
-		self.keyb = {'play':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"play"'],
-					 'stop':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"stop"'],
+		self.action = ['play', 'stop', 'pause', 'next', 'prev', 'pp','repeat', 'random', 'seek forward', 'seek backward' ]
+		self.keyb = {'play':	['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"play"'],
+					 'stop':	['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"stop"'],
 					 'pause':   ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pause"'],
-					 'next':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"next"'],
-					 'prev':    ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"prev"'],
-					 'pp':      ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pp"'],
+					 'next':	['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"next"'],
+					 'prev':	['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"prev"'],
+					 'pp':	  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"pp"'],
 					 'repeat':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"repeat"'],
 					 'random':  ['not defined', 0, 0, 0, 0, 0, 0, 'run_command','"random"'],
+					 'seek forward':  ['not defined', 0, 0, 0, 0, 0, 0, 'seek','"forward"'],
+					 'seek backward':  ['not defined', 0, 0, 0, 0, 0, 0, 'seek','"backward"'],
 					 }
 		"""Load configuration from file"""
 		conf = ConfigParser.ConfigParser()
@@ -127,6 +132,48 @@ def run_command(action):
 	print action
 	p = subprocess.Popen("sonata " + action, shell=True)
 
+### seek ######################################################################
+
+def handle_PositionGet(position):
+#	print str(position)
+	player.PositionSet(dbus.Int32(position + vector_),
+							 dbus_interface='org.freedesktop.MediaPlayer',
+							 reply_handler=handle_PositionSet,
+							 error_handler=handle_PositionSet)
+
+def handle_PositionGet_error(e):
+	print "\t", str(e)
+
+def handle_PositionSet():
+	pass
+
+def seek(vector):
+	bus = dbus.SessionBus()
+	global player, vector_
+	try:
+		player = bus.get_object('org.mpris.mpd','/Player')
+	except dbus.DBusException, msg:
+		dialog = gtk.MessageDialog(parent=None,
+			 flags=gtk.DIALOG_MODAL, type=gtk.MESSAGE_WARNING,
+			  buttons=gtk.BUTTONS_OK)
+		dialog.set_markup('mpDris plugin not started')
+#		dialog.format_secondary_text(str(msg))
+		gtk.gdk.threads_enter()
+		response = dialog.run()
+		dialog.destroy()
+		gtk.gdk.threads_leave()
+		return
+	if vector == 'forward':
+		# forward 5 sec
+		vector_ = 5000
+	else:
+		# backward 5 sec
+		vector_ = -5000
+	position = player.PositionGet(dbus_interface='org.freedesktop.MediaPlayer',
+									reply_handler=handle_PositionGet,
+									error_handler=handle_PositionGet_error)
+###############################################################################
+
 def on_configure(plugin_name):
 	def defineNewKey(widget,data):
 
@@ -214,7 +261,7 @@ def on_configure(plugin_name):
 		update()
 
 
-	def update():		
+	def update():
 		global col
 		window.vbox.remove(col)
 		col = gtk.HBox(False, 0)
@@ -290,6 +337,3 @@ def on_configure(plugin_name):
 
 	else:
 		window.destroy()
-
-
-
