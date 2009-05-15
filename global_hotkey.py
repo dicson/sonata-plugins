@@ -18,11 +18,8 @@ import subprocess, gtk, ConfigParser, os
 
 from gobject import source_remove,io_add_watch
 import ConfigParser
-##########
 import dbus
-import threading
 
-########
 try:
 	from Xlib.display import Display
 	from Xlib import X
