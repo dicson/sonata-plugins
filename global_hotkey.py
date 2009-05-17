@@ -56,22 +56,26 @@ class XlibKeys(object):
 			elif mask[0] == ScrollLockKeyCode:
 				self.scrolllock_mask = 1 << index
 
-		self.action = [ 'play', 'stop', 'pause', 'next', 'prev', 'pp','repeat',
-						'random', 'seek forward', 'seek backward', 'toggle',
-						'popup']
+		self.action = [ 'play song in playlist', 'stop currently playing song',
+						'pause currently playing song', 'play next song',
+						'play previous song', 'toggle play/pause',
+						'toggle repeat mode','toggle random mode',
+						'seek forward', 'seek backward',
+						'toggle minimized or visible','popup song notification']
 		#self. keyb = 'name':          [key combination,callback,callback-arguments]
-		self.keyb = {'play':	       ['not defined', 'run_command','"play"'],
-					 'stop':	       ['not defined', 'run_command','"stop"'],
-					 'pause':          ['not defined', 'run_command','"pause"'],
-					 'next':           ['not defined', 'run_command','"next"'],
-					 'prev':	       ['not defined', 'run_command','"prev"'],
-					 'pp':	           ['not defined', 'run_command','"pp"'],
-					 'repeat':         ['not defined', 'run_command','"repeat"'],
-					 'random':         ['not defined', 'run_command','"random"'],
-					 'toggle':         ['not defined', 'sonata_commands','"toggle"'],
-					 'popup':          ['not defined', 'sonata_commands','"popup"'],
-					 'seek forward':   ['not defined', 'seek','"forward"'],
-					 'seek backward':  ['not defined', 'seek','"backward"'],
+		self.keyb = {
+		'play song in playlist':	   ['not defined', 'run_command','"play"'],
+		'stop currently playing song': ['not defined', 'run_command','"stop"'],
+		'pause currently playing song':['not defined', 'run_command','"pause"'],
+		'play next song':              ['not defined', 'run_command','"next"'],
+		'play previous song':	       ['not defined', 'run_command','"prev"'],
+		'toggle play/pause':	       ['not defined', 'run_command','"pp"'],
+		'toggle repeat mode':          ['not defined', 'run_command','"repeat"'],
+		'toggle random mode':          ['not defined', 'run_command','"random"'],
+		'toggle minimized or visible': ['not defined', 'sonata_commands','"toggle"'],
+		'popup song notification':     ['not defined', 'sonata_commands','"popup"'],
+		'seek forward':                ['not defined', 'seek','"forward"'],
+		'seek backward':               ['not defined', 'seek','"backward"'],
 					 }
 		"""Load configuration from file"""
 		conf = ConfigParser.ConfigParser()
@@ -121,22 +125,22 @@ class XlibKeys(object):
 	def grabKey(self,action):
 		for command in self.keyb.keys():
 			keys = self.keyb[command][0]
-			if keys.lower() == 'not defined':
-				mask = keycode = 0
-			else:
+			if keys.lower() != 'not defined':
 				modifiers = re.findall("<(\w+)>", keys)
 				mod = self.string_to_mask(modifiers)
 				key = re.findall("(@?\w+@?)$", keys)[0]
 				keycode = self.string_to_keycode(key)
 				mode = Xlib.X.GrabModeAsync
 				if action == 'grab':
-					for mask in (0, self.capslock_mask, self.numlock_mask, self.scrolllock_mask, \
-						self.capslock_mask | self.numlock_mask, self.capslock_mask | self.scrolllock_mask, \
+					for mask in (0, self.capslock_mask, self.numlock_mask,
+						self.scrolllock_mask, self.capslock_mask | self.numlock_mask,
+						self.capslock_mask | self.scrolllock_mask,
 						self.capslock_mask | self.numlock_mask | self.scrolllock_mask):
 						self.root.grab_key(keycode, mod | mask, 1, mode, mode)
 				elif action == 'free':
-					for mask in (0, self.capslock_mask, self.numlock_mask, self.scrolllock_mask, \
-						self.capslock_mask | self.numlock_mask, self.capslock_mask | self.scrolllock_mask, \
+					for mask in (0, self.capslock_mask, self.numlock_mask,
+						self.scrolllock_mask, self.capslock_mask | self.numlock_mask,
+						self.capslock_mask | self.scrolllock_mask,
 						self.capslock_mask | self.numlock_mask | self.scrolllock_mask):
 						self.root.ungrab_key(keycode, mod | mask, 1)
 					self.display.flush()
@@ -178,7 +182,6 @@ def run_command(action):
 	p = subprocess.Popen("sonata " + action, shell=True)
 
 ### seek ######################################################################
-
 def handle_PositionGet(position):
 #	print str(position)
 	player.PositionSet(dbus.Int32(position + vector_),
@@ -233,25 +236,25 @@ def sonata_commands(command):
 						error_handler=handle_none)
 
 def on_configure(plugin_name):
+	if not X:
+		return
+
 	def defineNewKey(widget,data):
-
-		def is_keycode_modifier(keycode):
-			for keysym in keysym_to_mask:
-				if keycode == DISPLAY.keysym_to_keycode(keysym):
-					return True
-			return False
-
 		def keypressed(widget, event):
-			def keycodes_to_string(keycodes, default_string = "disabled"):
-				if not keycodes: return default_string
+			keycode = event.hardware_keycode
+			if keycode not in keycodes_pressed:
+				keycodes_pressed.append(keycode)
 
+			string = 'not defined'
+			#keycodes to string
+			if keycodes_pressed:
 				keycodes_to_modifier = {}
 				for keysym, tmask in keysym_to_mask.items():
 					modifier = tmask[1]
 					keycodes_to_modifier[DISPLAY.keysym_to_keycode(keysym)] = modifier
 				strmod = strkey = ""
 				current_modifiers = []
-				for keycode in keycodes:
+				for keycode in keycodes_pressed:
 					if keycode in keycodes_to_modifier:
 						string = keycodes_to_modifier[keycode]
 						if string in current_modifiers: continue
@@ -261,13 +264,20 @@ def on_configure(plugin_name):
 					keysym = DISPLAY.keycode_to_keysym(keycode, 0)
 
 					for key in inspect.getmembers(Xlib.XK):
-						if len(key) != 2 or key[0].find("XK_") != 0 or key[1] != keysym: continue
+						if len(key) != 2 or key[0].find("XK_") != 0 or \
+													key[1] != keysym: continue
 						strkey = key[0].replace("XK_", "")
 						break
 					else: strkey = "@%d@" %keycode
 					break
+				string = strmod + strkey
+			# set button label
+			button.set_label(string)
 
-				return strmod + strkey
+			is_keycode_modifier = False
+			for keysym in keysym_to_mask:
+				if keycode == DISPLAY.keysym_to_keycode(keysym):
+					is_keycode_modifier = True
 
 			def keycodes_to_mask(display, keycodes):
 				mask = 0
@@ -278,19 +288,13 @@ def on_configure(plugin_name):
 							mask = mask | modmask
 				return mask
 
-			keycode = event.hardware_keycode
-			if keycode not in keycodes_pressed:
-				keycodes_pressed.append(keycode)
-
-			string = keycodes_to_string(keycodes_pressed)
-			button.set_label(string)
-			if keycodes_to_mask(DISPLAY, keycodes_pressed) and not is_keycode_modifier(keycode):
+			if keycodes_to_mask(DISPLAY, keycodes_pressed) and not is_keycode_modifier:
 				for m in a.keyb.keys():
 					if string ==a.keyb[m][0]:
-						useddialog = gtk.MessageDialog(window, gtk.DIALOG_DESTROY_WITH_PARENT,
-												   gtk.MESSAGE_INFO,
-												   gtk.BUTTONS_OK,
-												   "Key combination already mapped by '%s'" % m)
+						useddialog = gtk.MessageDialog(
+									window, gtk.DIALOG_DESTROY_WITH_PARENT,
+									gtk.MESSAGE_INFO, gtk.BUTTONS_OK,
+									"Key combination already mapped by '%s'" % m)
 						useddialog.run()
 						useddialog.destroy()
 						a.keyb[data][0] = 'not defined'
@@ -304,8 +308,9 @@ def on_configure(plugin_name):
 		keycodes_pressed = []
 		pkeyinfo = gtk.MessageDialog(window, gtk.DIALOG_DESTROY_WITH_PARENT,
 									 gtk.MESSAGE_INFO, gtk.BUTTONS_CANCEL,
-									 "Please Press a Key for '%s' while holding one or more modifier Keys (ctrl, shift, alt, winkey, alt_gr)" % data)
-
+									 "Please Press a Key for '%s' \
+									 while holding one or more modifier Keys \
+									 (ctrl, shift, alt, winkey, alt_gr)" % data)
 		pkeyinfo.add_events(gtk.gdk.KEY_PRESS_MASK)
 		global button
 		button = widget
@@ -333,10 +338,11 @@ def on_configure(plugin_name):
 
 		for key in a.action:
 			label = gtk.Label(key)
+			label.set_alignment(xalign=0, yalign=0.5)
 			command.pack_start(label, False, False)
 
 			knopf = str(a.keyb[key][0])
-			
+
 			button = gtk.Button(knopf)
 			keyf.pack_start(button, False, False, 5)
 			button.connect("clicked",defineNewKey, key)
@@ -354,8 +360,7 @@ def on_configure(plugin_name):
 		keyf.show()
 		clear.show()
 		col.show()
-	if not X:
-		return
+
 	window = gtk.Dialog(("%s configuration") %plugin_name)
 	window.add_button("gtk-cancel", gtk.RESPONSE_CANCEL)
 	window.add_button("gtk-ok", gtk.RESPONSE_OK)
@@ -371,23 +376,15 @@ def on_configure(plugin_name):
 
 	if response == gtk.RESPONSE_OK:
 		a.listen()
-		window.destroy()
-		## return save variables
-		#save_vars = []
-		#for key in a.keyb.keys():
-			#save_vars.append((key, a.keyb[key]))
-		#return save_vars
 
 		#"""Save configuration in file"""
 		conf = ConfigParser.ConfigParser()
 		for key in a.keyb.keys():
 			conf.set(None, key, a.keyb[key][0])
 		conf.write(file(os.path.expanduser('~/.config/sonata/Global hotkey'), 'w'))
+	window.destroy()
 
-	else:
-		window.destroy()
-
-########################
+######################## for test #############################################
 if __name__ == '__main__':
 	on_enable(True)
 	on_configure(None)
