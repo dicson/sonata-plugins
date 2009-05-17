@@ -103,8 +103,15 @@ class XlibKeys(object):
 	def ButtonHit(self,event):
 		for i in self.keyb.values():
 			modifiers = re.findall("<(\w+)>", i[0])
+			mod = self.string_to_mask(modifiers)
+			mods = []
+			for mask in (0, self.capslock_mask, self.numlock_mask,
+						self.scrolllock_mask,self.capslock_mask | self.numlock_mask,
+						self.capslock_mask | self.scrolllock_mask,
+						self.capslock_mask | self.numlock_mask | self.scrolllock_mask):
+				mods.append(mod | mask)
 			key = re.findall("(@?\w+@?)$", i[0])[0]
-			if self.string_to_keycode(key) == event:
+			if self.string_to_keycode(key) == event.detail and event.state in mods:
 				eval (i[1]+'('+i[2]+')')
 
 	def freeKey(self):
@@ -112,8 +119,8 @@ class XlibKeys(object):
 		self.grabKey('free')
 
 	def grabKey(self,action):
-		for key in self.keyb.keys():
-			keys = self.keyb[key][0]
+		for command in self.keyb.keys():
+			keys = self.keyb[command][0]
 			if keys.lower() == 'not defined':
 				mask = keycode = 0
 			else:
@@ -143,7 +150,7 @@ class XlibKeys(object):
 			#print arg1,arg2
 			event = self.display.next_event()
 			if event.type == X.KeyPress:
-				self.ButtonHit(event.detail)
+				self.ButtonHit(event)
 			return True
 
 		self.listener = io_add_watch(self.display, 1 ,checkKey)
