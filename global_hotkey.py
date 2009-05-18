@@ -220,20 +220,15 @@ def seek(vector):
 	position = player.PositionGet(dbus_interface='org.freedesktop.MediaPlayer',
 									reply_handler=handle_PositionGet,
 									error_handler=handle_PositionGet_error)
-###############################################################################
 
+### sonata commands ###########################################################
 def sonata_commands(command):
 	bus = dbus.SessionBus()
 	player = bus.get_object('org.MPD', '/org/MPD/Sonata')
-
-	if command == 'toggle':
-		player.toggle(dbus_interface='org.MPD.SonataInterface',
-						reply_handler=handle_none,
-						error_handler=handle_none)
-	if command == 'popup':
-		player.popup(dbus_interface='org.MPD.SonataInterface',
-						reply_handler=handle_none,
-						error_handler=handle_none)
+	player_method = getattr(player, command)
+	player_method(dbus_interface='org.MPD.SonataInterface',
+								reply_handler=handle_none,
+								error_handler=handle_none)
 
 def on_configure(plugin_name):
 	if not X:
