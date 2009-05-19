@@ -235,13 +235,8 @@ def on_configure(plugin_name):
 		return
 
 	def defineNewKey(widget,data):
-		def keypressed(widget, event):
-			keycode = event.hardware_keycode
-			if keycode not in keycodes_pressed:
-				keycodes_pressed.append(keycode)
-
+		def keycodes_to_string(keycodes):
 			string = 'not defined'
-			#keycodes to string
 			if keycodes_pressed:
 				keycodes_to_modifier = {}
 				for keysym, tmask in keysym_to_mask.items():
@@ -268,6 +263,14 @@ def on_configure(plugin_name):
 				string = strmod + strkey
 			# set button label
 			button.set_label(string)
+			return string
+
+		def key_press(widget, event):
+			keycode = event.hardware_keycode
+			if keycode not in keycodes_pressed:
+				keycodes_pressed.append(keycode)
+
+			string = keycodes_to_string(keycodes_pressed)
 
 			is_keycode_modifier = False
 			for keysym in keysym_to_mask:
@@ -300,16 +303,22 @@ def on_configure(plugin_name):
 				pkeyinfo.destroy()
 				update()
 
+		def key_release(widget, event):
+			keycode = event.hardware_keycode
+			while keycode in keycodes_pressed:
+				keycodes_pressed.remove(keycode)
+			keycodes_to_string(keycodes_pressed)
+
 		keycodes_pressed = []
 		pkeyinfo = gtk.MessageDialog(window, gtk.DIALOG_DESTROY_WITH_PARENT,
 									 gtk.MESSAGE_INFO, gtk.BUTTONS_CANCEL,
-									 "Please Press a Key for '%s' \
-									 while holding one or more modifier Keys \
-									 (ctrl, shift, alt, winkey, alt_gr)" % data)
+									 "Please Press a Key for '%s' while holding one or more modifier Keys " \
+									 "(ctrl, shift, alt, winkey, alt_gr)" % data)
 		pkeyinfo.add_events(gtk.gdk.KEY_PRESS_MASK)
 		global button
 		button = widget
-		pkeyinfo.connect('key-press-event', keypressed)
+		pkeyinfo.connect('key-press-event', key_press)
+		pkeyinfo.connect('key-release-event', key_release)
 		pkeyinfo.run()
 		pkeyinfo.destroy()
 
