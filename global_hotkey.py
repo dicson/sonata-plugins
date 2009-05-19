@@ -262,7 +262,8 @@ def on_configure(plugin_name):
 					break
 				string = strmod + strkey
 			# set button label
-			button.set_label(string)
+			#button.set_label(string)
+			pkeyinfo.set_property( "secondary-text",string)
 			return string
 
 		def key_press(widget, event):
@@ -311,9 +312,11 @@ def on_configure(plugin_name):
 
 		keycodes_pressed = []
 		pkeyinfo = gtk.MessageDialog(window, gtk.DIALOG_DESTROY_WITH_PARENT,
-									 gtk.MESSAGE_INFO, gtk.BUTTONS_CANCEL,
-									 "Please Press a Key for '%s' while holding one or more modifier Keys " \
-									 "(ctrl, shift, alt, winkey, alt_gr)" % data)
+									 gtk.MESSAGE_INFO, gtk.BUTTONS_CANCEL)
+		msg = "Please Press a Key for '%s' " \
+				"while holding one or more modifier Keys " \
+				"(ctrl, shift, alt, winkey, alt_gr)" % data
+		pkeyinfo.set_markup('<span style="normal">%s</span>' % msg)
 		pkeyinfo.add_events(gtk.gdk.KEY_PRESS_MASK)
 		global button
 		button = widget
