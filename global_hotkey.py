@@ -183,6 +183,16 @@ def on_enable(*args):
 def run_command(action):
 	p = subprocess.Popen("sonata " + action, shell=True)
 
+def show_warning(msg):
+	dialog = gtk.MessageDialog(parent=None,
+			 flags=gtk.DIALOG_MODAL, type=gtk.MESSAGE_WARNING,
+			  buttons=gtk.BUTTONS_OK)
+	dialog.set_markup(msg)
+	gtk.gdk.threads_enter()
+	response = dialog.run()
+	dialog.destroy()
+	gtk.gdk.threads_leave()
+
 ### now listen to clipboard ###################################################
 def handle_GetMetadata(meta):
 	title = 'Unknown Title'
@@ -191,7 +201,7 @@ def handle_GetMetadata(meta):
 	clipboard = gtk.clipboard_get()
 	gtk.gdk.threads_enter()
 	text = clipboard.wait_for_text()
-	
+
 	if 'title' in meta:
 		title = meta['title']
 	if 'artist' in meta:
@@ -199,7 +209,7 @@ def handle_GetMetadata(meta):
 	if 'album' in meta:
 		artist = meta['album']
 	text = 'now listen: "%s" by %s from %s' % (title, artist, album)
-	
+
 	clipboard.set_text(text)
 	clipboard.store()
 	gtk.gdk.threads_leave()
@@ -216,14 +226,7 @@ def now_listen(arg):
 	try:
 		player = bus.get_object('org.mpris.mpd','/Player')
 	except dbus.DBusException, msg:
-		dialog = gtk.MessageDialog(parent=None,
-			 flags=gtk.DIALOG_MODAL, type=gtk.MESSAGE_WARNING,
-			  buttons=gtk.BUTTONS_OK)
-		dialog.set_markup('mpDris plugin not started')
-		gtk.gdk.threads_enter()
-		response = dialog.run()
-		dialog.destroy()
-		gtk.gdk.threads_leave()
+		show_warning('mpDris plugin not started')
 		return
 	meta = player.GetMetadata(dbus_interface='org.freedesktop.MediaPlayer',
 									reply_handler=handle_GetMetadata,
@@ -240,24 +243,13 @@ def handle_PositionGet(position):
 def handle_PositionGet_error(e):
 	print "\t", str(e)
 
-def handle_none():
-	pass
-
 def seek(vector):
 	bus = dbus.SessionBus()
 	global player, vector_
 	try:
 		player = bus.get_object('org.mpris.mpd','/Player')
 	except dbus.DBusException, msg:
-		dialog = gtk.MessageDialog(parent=None,
-			 flags=gtk.DIALOG_MODAL, type=gtk.MESSAGE_WARNING,
-			  buttons=gtk.BUTTONS_OK)
-		dialog.set_markup('mpDris plugin not started')
-#		dialog.format_secondary_text(str(msg))
-		gtk.gdk.threads_enter()
-		response = dialog.run()
-		dialog.destroy()
-		gtk.gdk.threads_leave()
+		show_warning('mpDris plugin not started')
 		return
 	if vector == 'forward':
 		# forward 5 sec
@@ -442,4 +434,7 @@ def on_configure(plugin_name):
 ######################## for test #############################################
 if __name__ == '__main__':
 	on_enable(True)
-	on_configure(None)
+	#on_configure(None)
+	import gobject
+	loop = gobject.MainLoop()
+	loop.run()
