@@ -61,7 +61,8 @@ class XlibKeys(object):
 						'play previous song', 'toggle play/pause',
 						'toggle repeat mode','toggle random mode',
 						'seek forward', 'seek backward',
-						'toggle minimized or visible','popup song notification']
+						'toggle minimized or visible','popup song notification',
+						'now listen info to clipboard']
 		#self. keyb = 'name':          [key combination,callback,callback-arguments]
 		self.keyb = {
 		'play song in playlist':	   ['not defined', 'run_command','"play"'],
@@ -76,6 +77,7 @@ class XlibKeys(object):
 		'popup song notification':     ['not defined', 'sonata_commands','"popup"'],
 		'seek forward':                ['not defined', 'seek','"forward"'],
 		'seek backward':               ['not defined', 'seek','"backward"'],
+		'now listen info to clipboard':['not defined', 'now_listen', 'None']
 					 }
 		"""Load configuration from file"""
 		conf = ConfigParser.ConfigParser()
@@ -180,6 +182,52 @@ def on_enable(*args):
 
 def run_command(action):
 	p = subprocess.Popen("sonata " + action, shell=True)
+
+### now listen to clipboard ###################################################
+def handle_GetMetadata(meta):
+	title = 'Unknown Title'
+	artist = 'Unknown Artist'
+	album = 'Unknown Source'
+	clipboard = gtk.clipboard_get()
+	gtk.gdk.threads_enter()
+	text = clipboard.wait_for_text()
+	
+	if 'title' in meta:
+		title = meta['title']
+	if 'artist' in meta:
+		artist = meta['artist']
+	if 'album' in meta:
+		artist = meta['album']
+	text = 'now listen: "%s" by %s from %s' % (title, artist, album)
+	
+	clipboard.set_text(text)
+	clipboard.store()
+	gtk.gdk.threads_leave()
+
+def handle_GetMetadata_error(e):
+	print "\t", str(e)
+
+def handle_none():
+	pass
+
+def now_listen(arg):
+	bus = dbus.SessionBus()
+	global player
+	try:
+		player = bus.get_object('org.mpris.mpd','/Player')
+	except dbus.DBusException, msg:
+		dialog = gtk.MessageDialog(parent=None,
+			 flags=gtk.DIALOG_MODAL, type=gtk.MESSAGE_WARNING,
+			  buttons=gtk.BUTTONS_OK)
+		dialog.set_markup('mpDris plugin not started')
+		gtk.gdk.threads_enter()
+		response = dialog.run()
+		dialog.destroy()
+		gtk.gdk.threads_leave()
+		return
+	meta = player.GetMetadata(dbus_interface='org.freedesktop.MediaPlayer',
+									reply_handler=handle_GetMetadata,
+									error_handler=handle_GetMetadata_error)
 
 ### seek ######################################################################
 def handle_PositionGet(position):
