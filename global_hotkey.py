@@ -208,7 +208,7 @@ def handle_GetMetadata(meta):
 		artist = meta['artist']
 	if 'album' in meta:
 		album = meta['album']
-	text = 'now listen: "%s" by %s from %s' % (title, artist, album)
+	text = '/me now listen: "%s" by %s from %s' % (title, artist, album)
 
 	clipboard.set_text(text)
 	clipboard.store()

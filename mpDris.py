@@ -206,7 +206,7 @@ class MPRISTrackList(dbus.service.Object):
 
 class MPRISPlayer(dbus.service.Object):
 	def __init__(self, bus, path, mpd_wrapper):
-		dbus.service.Object.__init__(self, bus, '/Player');
+		dbus.service.Object.__init__(self, bus, '/Sonata');
 		self.__path = path
 		self.mpd_wrapper = mpd_wrapper
 
